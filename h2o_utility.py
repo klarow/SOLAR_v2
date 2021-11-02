@@ -680,9 +680,9 @@ use_proband, house, verbose, buildonly, empi2cov, cov_list, empi2hhid, output_fa
 
     """
 
-    # if the h2_path exists, we remove it
-    # if not buildonly and os.path.exists(h2_path):
-    #     shutil.rmtree(h2_path)
+    if the h2_path exists, we remove it
+    if not buildonly and os.path.exists(h2_path):
+        shutil.rmtree(h2_path)
 
     available_families = [fid for fid in families_with_case[icd9] if eth == 'ALL' or fam2eth[fid] == eth]
     chosen_families = random.sample(available_families, num_families)
@@ -717,7 +717,7 @@ use_proband, house, verbose, buildonly, empi2cov, cov_list, empi2hhid, output_fa
         if output_fams:
             results["chosen_families"] = chosen_families
         #Deletes directory
-        # shutil.rmtree(h2_path)
+        shutil.rmtree(h2_path)
     else:
     #KLB output families included REMOVE ME
         #KLBSHARED_ENV_4
@@ -767,7 +767,7 @@ def parse_polygenic_out(polygenic_out_fn, verbose):
         #NOTE There is sometimes no standard error in c2 output!
         except IndexError:
             if verbose:
-                print >> sys.stderr, "SOLAR failed to get converge on a shared environment estimate. Could be a convergence error."
+                print >> sys.stderr, "SOLAR failed to converge on a shared environment estimate. Could be a convergence error."
             c2 = None
             c2_p = None
         c2_err = None
