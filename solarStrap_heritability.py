@@ -355,8 +355,8 @@ house=False, prefix='', nprocs=1, num_attempts=200, buildonly=False, use_proband
 
 
         # clean up
-        if not buildonly:
-            shutil.rmtree(icd9_path)
+        # if not buildonly:
+        #     shutil.rmtree(icd9_path)
 
     results_file.close()
     runs_file.close()
