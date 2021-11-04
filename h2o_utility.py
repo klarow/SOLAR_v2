@@ -494,7 +494,7 @@ verbose = True, family_ids_only = None):
 
     return
 
-def extract_converged_sig_estimates(results, params, process_flag):
+def extract_converged_sig_estimates(results, params, process_flag, pcutoff):
     """
     extracts all runs that converge and that converge and are significant
     """
@@ -584,15 +584,15 @@ def estimate_h2o(h2r_results, process_flag = "h2", ci = 95., show_warnings=True,
 
     if process_flag == "h2":
         params = [edge_eps, denoise_eps]
-        converged, sig_converged, num_converged , num_significant = extract_converged_sig_estimates(h2r_results, params, "h2")
+        converged, sig_converged, num_converged , num_significant = extract_converged_sig_estimates(h2r_results, params, "h2", pcutoff)
 
     elif process_flag == "c2":
         params = [edge_eps_c2,denoise_eps_c2]
-        converged, sig_converged, num_converged, num_significant = extract_converged_sig_estimates(h2r_results, params, "c2")
+        converged, sig_converged, num_converged, num_significant = extract_converged_sig_estimates(h2r_results, params, "c2", pcutoff)
 
     elif process_flag == "h2c2":
         params = [edge_eps, denoise_eps, edge_eps_c2, denoise_eps_c2]
-        converged, sig_converged, num_converged, num_significant = extract_converged_sig_estimates(h2r_results, params, "h2c2")
+        converged, sig_converged, num_converged, num_significant = extract_converged_sig_estimates(h2r_results, params, "h2c2", pcutoff)
 # Don't have to return length of converged and significant, exclude in function
 
     num_converged = len(converged)
