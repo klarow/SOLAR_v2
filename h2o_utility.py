@@ -751,7 +751,7 @@ use_proband, house, verbose, buildonly, empi2cov, cov_list, empi2hhid, output_fa
 
     """
 
-    if the h2_path exists, we remove it
+    #if the h2_path exists, we remove it
     # if not buildonly and os.path.exists(h2_path):
     #     shutil.rmtree(h2_path)
 
