@@ -495,56 +495,109 @@ verbose = True, family_ids_only = None):
 
     return
 
-def extract_converged_estimates(h2r_results, edge_eps, denoise_eps):
+def extract_converged_sig_estimates(results, params, process_flag):
+"""extracts all runs that converge and that converge and are significant"""
     converged = list()
+    sig_converged = list()
+    num_significant = 0
 
-    for h2, h2err, pval in h2r_results:
-        if h2 == None or h2err == None or h2 < edge_eps or h2 > (1-edge_eps):
-            continue
+    if process_flag == "h2":
+        edge_eps, denoise_eps = params
 
-        if h2err < denoise_eps*h2:
-            continue
+        for h2, h2_err, pval in results:
+            if h2 == None or h2_err == None or h2 < edge_eps or h2 > (1-edge_eps):
+                continue
 
-        converged.append( (h2, h2err, pval) )
-    return converged
+            if h2_err < denoise_eps*h2:
+                continue
 
-def extract_converged_estimates_c2(h2r_results):
-#Note, this is a temporary function until we estimate noise and edge parameters for C2
-    converged = list()
+            converged.append( (h2, h2_err, pval) )
 
-    for h2, h2err, pval in h2r_results:
-        if h2 == None or h2err == None or h2 <= 0 or h2 >= 1:
-            continue
+            if pval < pcutoff:
+                num_significant += 1
+                sig_converged.append( (h2, h2err, pval) )
 
-        if h2err <= 0:
-            continue
 
-        converged.append( (h2, h2err, pval) )
-    print("Number Converged C2 Estimates:", len(converged))
-    return converged
 
-#KLBSHARED_ENV_11 - Repeat for shared environment
-def estimate_h2o(h2r_results, c2_flag = False, ci = 95., show_warnings=True, show_errors=True):
+    elif process_flag == "c2":
+        edge_eps_c2, denoise_eps_c2 = params
+        #Note, edge eps and denoise eps are not estimated yet.  Placeholder = 0
+
+        for c2, c2_err, c_pval in results:
+            if c2 == None or c2_err == None or c2 <= edge_eps_c2 or c2 >= (1-edge_eps_c2):
+                #Update <= to < and >= to > to mirror h2 formatting when c2 params estimated. Param currently 0
+                continue
+
+            if c2_err <= denoise_eps_c2*c2:
+                #Update <= to < to mirror h2 formatting when c2 params estimated.  Param currently 0
+                continue
+
+            converged.append( (c2, c2_err, c_pval) )
+
+            if c_pval < pcutoff:
+                num_significant += 1
+                sig_converged.append( (c2, c2_err, c_pval) )
+
+
+
+    elif process_flag == "h2c2":
+
+        edge_eps, denoise_eps, edge_eps_c2, denoise_eps_c2 = params
+
+        for h2, h2_err, pval, c2, c2_err, c_pval in results:
+            if h2 == None or h2_err == None or h2 < edge_eps or h2 > (1-edge_eps) or\
+            c2 == None or c2_err == None or c2 <= edge_eps_c2 or c2 >= (1-edge_eps_c2):
+            #For c2 part, update <= to < and >= to > to mirror h2 formatting when c2 params estimated. Param currently 0
+                continue
+
+            if h2_err < denoise_eps*h2 or c2_err <= denoise_eps_c2*c2:
+            #For c2 part, update <= to < to mirror h2 formatting when c2 params estimated.  Param currently 0
+                continue
+
+            converged.append( (h2, h2_err, pval, c2, c2_err, c_pval) )
+
+            if pval < pcutoff and c2_pval < pcutoff:
+                num_significant += 1
+                sig_converged.append((h2, h2err, pval, c2, c2_err, c2_pval))
+
+
+
+    return converged, sig_converged,  len(converged), num_significant
+
+
+
+def estimate_h2o(h2r_results, process_flag = "h2", ci = 95., show_warnings=True, show_errors=True):
 
     num_converged = 0
     num_significant = 0
     sig_h2s = list()
 
     pcutoff = 0.05
+    cidiff = (100.-ci)/2.
     edge_eps = 1e-9
     denoise_eps = 0.05
-    #Temporary c2 flag since edge eps and denoise epse has not been estimated for C2 yet
-    if c2_flag:
-        converged = extract_converged_estimates_c2(h2r_results)
-    else:
-        converged = extract_converged_estimates(h2r_results, edge_eps, denoise_eps)
+
+    edge_eps_c2 = 0
+    denoise_eps_c2 = 0
+    #These two parameters are not estimated yet, using 0 as a placeholder
+
+    if process_flag == "h2":
+        params = [edge_eps, denoise_eps]
+        converged, sig_converged, num_converged , num_significant = extract_converged_sig_estimates(h2r_results, params, "h2")
+
+    elif process_flag == "c2":
+        params = [edge_eps_c2,denoise_eps_c2]
+        converged, sig_converged, num_converged, num_significant = extract_converged_sig_estimates(h2r_results, params, "c2")
+
+    elif process_flag == "h2c2":
+        params = [edge_eps, denoise_eps, edge_eps_c2, denoise_eps_c2]
+        converged, sig_converged, num_converged, num_significant = extract_converged_sig_estimates(h2r_results, params, "h2c2")
+
 
     num_converged = len(converged)
+    num_significant = len(sig_converged)
 
-    for h2, h2err, pval in converged:
-        if pval < pcutoff:
-            num_significant += 1
-            sig_h2s.append((h2, h2err, pval))
+    posa = num_significant/float(num_converged)
 
     if num_significant == 0:
         if show_errors:
@@ -555,16 +608,33 @@ def estimate_h2o(h2r_results, c2_flag = False, ci = 95., show_warnings=True, sho
         if show_warnings:
             print >> sys.stderr, "WARNING: There are fewer than 30 (%d) significant and converged estimates." % num_significant
 
-    h2o, solarerr, solarpval = sorted(sig_h2s)[len(sig_h2s)/2]
-    h2o_estimates = zip(*sig_h2s)[0]
 
-    cidiff = (100.-ci)/2.
-    h2olo = numpy.percentile(h2o_estimates, cidiff)
-    h2ohi = numpy.percentile(h2o_estimates, 100.-cidiff)
-    posa = num_significant/float(num_converged)
+    if process_flag == "h2" or process_flag == "c2":
+        estimate, solarerr, solarpval = sorted(sig_converged)[len(sig_converged)/2]
+
+        estimates = zip(*sig_converged)[0]
+
+        estlo = numpy.percentile(estimates, cidiff)
+        esthi = numpy.percentile(estimates, 100.-cidiff)
+
+        return estimate, estlo, esthi, solarerr, solarpval, num_converged, num_significant, posa
+        #Update naming here
+
+    else:
+        h2o, h2_err, h2_pval, c2o, c2_err, c2_pval = sorted(sig_converged)[len(sig_converged)/2]
+
+        h2o_estimates = zip(*sig_converged)[0]
+        h2olo = numpy.percentile(h2o_estimates, cidiff)
+        h2ohi = numpy.percentile(h2o_estimates, 100.-cidiff)
+
+        c2o_estimates = zip(*sig_converged)[3]
+        c2olo = numpy.percentile(c2o_estimates, cidiff)
+        c2ohi = numpy.percentile(c2o_estimates, 100.-cidiff)
 
 
-    return h2o, h2olo, h2ohi, solarerr, solarpval, num_converged, num_significant, posa
+        return h2o, h2olo, h2ohi, h2_err, h2_pval, num_converged, num_significant, posa, c2o, c2olo, c2ohi, c2_err, c2_pval
+
+
 
 #KLB 6 add in empicov and covlist
 #KLB hhid_6 add in empi2hhid
@@ -762,14 +832,14 @@ def parse_polygenic_out(polygenic_out_fn, verbose):
 
         try:
             c2 = float(c2_raw[0].split()[2])
-            c2_p = float(c2_raw[0].split()[5])
+            c2_pval = float(c2_raw[0].split()[5])
 
         #NOTE There is sometimes no standard error in c2 output!
         except IndexError:
             if verbose:
                 print >> sys.stderr, "SOLAR failed to converge on a shared environment estimate. Could be a convergence error."
             c2 = None
-            c2_p = None
+            c2_pval = None
         c2_err = None
 
         try:
@@ -778,7 +848,7 @@ def parse_polygenic_out(polygenic_out_fn, verbose):
             c2_raw = None
 
     #KLBSHARED_ENV_2
-    return {'h2r':h2r, 'err':h2r_err, 'pvalue':p,'c2':c2, 'c2_err':c2_err, 'c2_pvalue':c2_p }
+    return {'h2r':h2r, 'err':h2r_err, 'pvalue':p,'c2':c2, 'c2_err':c2_err, 'c2_pvalue':c2_pval }
 
 def single_solar_run(h2_path, trait_type, house=False, verbose=False, really_verbose=False):
     """

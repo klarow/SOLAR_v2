@@ -12,7 +12,7 @@ USAGE EXAMPLE
 python solarStrap_heritability.py trait=path/to/traitfile.txt.gz type=D demog=demogtable.txt.gz fam=family_ids.txt.gz ped=generic_pedigree.txt.gz [nfam=0.15] [sd=path/to/working_directory] [ace=no] [verbose=no] [samples=200] [buildonly=no] [proband=yes]
 
 """
-__version__ = 0.9
+__version__ = 1.0
 
 
 import os
@@ -55,7 +55,7 @@ common_data_path = ''
 #KLB hhid_2 add in hhid file
 def main(demographic_file, family_file, pedigree_file, trait_path, cov_file, hhid_file,
 solar_dir, trait_type, num_families_range, diag_slice=None, ethnicities=None, verbose=False,
-house=False, prefix='', nprocs=1, num_attempts=200, buildonly=False, use_proband=True,output_fams=False):
+house=False, prefix='', nprocs=1, num_attempts=200, buildonly=False, use_proband=True,output_fams=False,h2c2_coprocess=True):
 
     if trait_type == 'D':
         trait_type_code = TRAIT_TYPE_BINARY
@@ -310,37 +310,53 @@ house=False, prefix='', nprocs=1, num_attempts=200, buildonly=False, use_proband
                     includedfam_file.close()
 
 
-                estimates = estimate_h2o(ae_h2r_results)
-                if estimates:
-                    h2o, h2olo, h2ohi, solarerr, solarpval, num_converged, num_significant, posa = estimates
+                ae_h2_estimate = estimate_h2o(ae_h2r_results, "h2")
+                if ae_h2_estimate:
+                    h2o, h2olo, h2ohi, solarerr, solarpval, num_converged, num_significant, posa = ae_h2_estimate
                     print "%10s %10s %5d %4s %7.2f %7.2f %7.2e %7d %7d %7d %7.2f" % (icd9, eth, num_families, 'AE', h2o, solarerr, solarpval, num_attempts, num_converged, num_significant, posa)
                     results_writer.writerow([icd9, eth, num_families, 'AE', h2o, h2olo, h2ohi, solarerr, solarpval, num_attempts, num_converged, num_significant, posa])
 
                 if house:
-                    #KLBSHARED_ENV_9 - Repeat output for shared environment
+
                     for h2o, err, pval, c2, c2_err, c2_pval in ace_h2r_results:
                         runs_writer.writerow([icd9, eth, num_families, 'ACE_h2o', h2o, err, pval])
                         runs_writer.writerow([icd9, eth, num_families, 'ACE_Shared_Env', c2, c2_err, c2_pval])
 
+                    if h2c2_coprocess:
+                        #h2 and c2 are processed together, so runs mush have h2 AND c2 converged and significant, median h2 selected and corresponding c2 (so explained variance of c2 and h2 adds to <= 1)
+                        h2c2_estimates = estimate_h2o(ace_h2r_results, "h2c2")
 
-                    estimates = estimate_h2o([e[0:3] for e in ace_h2r_results])
+                        if h2c2_estimates:
+                            h2o, h2olo, h2ohi, h2_err, h2_pval, num_converged, num_significant, posa, c2o, c2olo, c2ohi, c2_err, c2_pval = h2c2_estimates
 
-                    if estimates:
-                        h2o, h2olo, h2ohi, solarerr, solarpval, num_converged, num_significant, posa = estimates
-                        print "%10s %10s %5d %4s %7.2f %7.2f %7.2e %7d %7d %7d %7.2f" % (icd9, eth, num_families, 'ACE_h2o', h2o, solarerr, solarpval, num_attempts, num_converged, num_significant, posa)
-                        results_writer.writerow([icd9, eth, num_families, 'ACE_h2o', h2o, h2olo, h2ohi, solarerr, solarpval, num_attempts, num_converged, num_significant, posa])
-
-                    #KLBSHARED_ENV_10 - Repeat for shared environment
-                    estimates = estimate_h2o([e[3:] for e in ace_h2r_results], True)
-                    if estimates:
-                        h2o, h2olo, h2ohi, solarerr, solarpval, num_converged, num_significant, posa = estimates
-                        print "%10s %10s %5d %4s %7.2f %7.2f %7.2e %7d %7d %7d %7.2f" % (icd9, eth, num_families, 'ACE_Shared_Env', h2o, solarerr, solarpval, num_attempts, num_converged, num_significant, posa)
-                        results_writer.writerow([icd9, eth, num_families, 'ACE_Shared_Env', h2o, h2olo, h2ohi, solarerr, solarpval, num_attempts, num_converged, num_significant, posa])
+                            print "%10s %10s %5d %4s %7.2f %7.2f %7.2e %7d %7d %7d %7.2f" % (icd9, eth, num_families, 'ACE_h2o', h2o, solarerr, solarpval, num_attempts, num_converged, num_significant, posa)
+                            results_writer.writerow([icd9, eth, num_families, 'ACE_h2o', h2o, h2olo, h2ohi, solarerr, solarpval, num_attempts, num_converged, num_significant, posa])
 
 
-        # # clean up
-        # if not buildonly:
-        #     shutil.rmtree(icd9_path)
+                            print "%10s %10s %5d %4s %7.2f %7.2f %7.2e %7d %7d %7d %7.2f" % (icd9, eth, num_families, 'ACE_Shared_Env', c2o, c2_err, c2_pval, num_attempts, num_converged, num_significant, posa)
+                            results_writer.writerow([icd9, eth, num_families, 'ACE_Shared_Env', c2o, c2olo, c2ohi, c2_err, c2_pval, num_attempts, num_converged, num_significant, posa])
+
+
+                    else:
+                        #h2 and c2 are processed seperately, so h2 is all sig and converged runs according to h2 only and it's the median h2 value.  Repeat with C2
+                        h2_estimate = estimate_h2o([e[0:3] for e in ace_h2r_results],"h2")
+
+                        if h2_estimate:
+                            h2o, h2olo, h2ohi, solarerr, solarpval, num_converged, num_significant, posa = h2_estimate
+                            print "%10s %10s %5d %4s %7.2f %7.2f %7.2e %7d %7d %7d %7.2f" % (icd9, eth, num_families, 'ACE_h2o', h2o, solarerr, solarpval, num_attempts, num_converged, num_significant, posa)
+                            results_writer.writerow([icd9, eth, num_families, 'ACE_h2o', h2o, h2olo, h2ohi, solarerr, solarpval, num_attempts, num_converged, num_significant, posa])
+
+
+                        c2_estimate = estimate_h2o([e[3:] for e in ace_h2r_results], "c2")
+                        if c2_estimate:
+                            c2o, c2olo, c2ohi, c2_err, c2_pval, num_converged, num_significant, posa = c2_estimate
+                            print "%10s %10s %5d %4s %7.2f %7.2f %7.2e %7d %7d %7d %7.2f" % (icd9, eth, num_families, 'ACE_Shared_Env', c2o, c2_err, c2_pval, num_attempts, num_converged, num_significant, posa)
+                            results_writer.writerow([icd9, eth, num_families, 'ACE_Shared_Env', c2o, c2olo, c2ohi, c2_err, c2_pval, num_attempts, num_converged, num_significant, posa])
+
+
+        # clean up
+        if not buildonly:
+            shutil.rmtree(icd9_path)
 
     results_file.close()
     runs_file.close()
@@ -365,7 +381,7 @@ if __name__ == '__main__':
 #KLB hhid1 added hhid to valid arguments and to main as hhid_file
 #KLB output families included
     valid_args = ('demog', 'fam', 'ped', 'trait', 'cov','hhid', 'sd', 'type', 'nfam', 'slice',
-        'eth', 'verbose', 'ace', 'name', 'nprocs','samples', 'buildonly', 'proband','outputfams')
+        'eth', 'verbose', 'ace', 'name', 'nprocs','samples', 'buildonly', 'proband','outputfams',"h2c2coprocess")
     for argname in args.keys():
         if not argname in valid_args:
             raise Exception("Provided argument: `%s` is not a valid argument name." % argname)
@@ -388,4 +404,5 @@ if __name__ == '__main__':
         num_attempts = 200 if not 'samples' in args else int(args['samples']),
         buildonly = False if not 'buildonly' in args else args['buildonly'].lower() == 'yes',
         use_proband = True if not 'proband' in args else args['proband'].lower() == 'yes',
-        output_fams = False if not 'outputfams' in args else args['outputfams'].lower() == 'yes')
+        output_fams = False if not 'outputfams' in args else args['outputfams'].lower() == 'yes'
+        h2c2_coprocess = True if not "h2c2coprocess" in args else args['h2c2coprocess'].lower() == 'yes' )
