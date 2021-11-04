@@ -404,5 +404,5 @@ if __name__ == '__main__':
         num_attempts = 200 if not 'samples' in args else int(args['samples']),
         buildonly = False if not 'buildonly' in args else args['buildonly'].lower() == 'yes',
         use_proband = True if not 'proband' in args else args['proband'].lower() == 'yes',
-        output_fams = False if not 'outputfams' in args else args['outputfams'].lower() == 'yes'
+        output_fams = False if not 'outputfams' in args else args['outputfams'].lower() == 'yes',
         h2c2_coprocess = True if not "h2c2coprocess" in args else args['h2c2coprocess'].lower() == 'yes' )

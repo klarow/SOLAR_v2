@@ -23,7 +23,6 @@ TRAIT_TYPE_QUANTITATIVE = 0
 TRAIT_TYPE_BINARY = 1
 
 
-#John is name of person doing
 def random_string(N):
     return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(N))
 
@@ -496,7 +495,9 @@ verbose = True, family_ids_only = None):
     return
 
 def extract_converged_sig_estimates(results, params, process_flag):
-"""extracts all runs that converge and that converge and are significant"""
+    """
+    extracts all runs that converge and that converge and are significant
+    """
     converged = list()
     sig_converged = list()
     num_significant = 0
@@ -592,7 +593,7 @@ def estimate_h2o(h2r_results, process_flag = "h2", ci = 95., show_warnings=True,
     elif process_flag == "h2c2":
         params = [edge_eps, denoise_eps, edge_eps_c2, denoise_eps_c2]
         converged, sig_converged, num_converged, num_significant = extract_converged_sig_estimates(h2r_results, params, "h2c2")
-
+# Don't have to return length of converged and significant, exclude in function
 
     num_converged = len(converged)
     num_significant = len(sig_converged)
