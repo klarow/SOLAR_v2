@@ -524,7 +524,7 @@ def extract_converged_sig_estimates(results, params, process_flag, pcutoff):
         edge_eps_c2, denoise_eps_c2 = params
         #Note, edge eps and denoise eps are not estimated yet.  Placeholder = 0
 
-        for c2, c2_err, c_pval in results:
+        for c2, c2_err, c2_pval in results:
             if c2 == None or c2_err == None or c2 <= edge_eps_c2 or c2 >= (1-edge_eps_c2):
                 #Update <= to < and >= to > to mirror h2 formatting when c2 params estimated. Param currently 0
                 continue
@@ -533,11 +533,11 @@ def extract_converged_sig_estimates(results, params, process_flag, pcutoff):
                 #Update <= to < to mirror h2 formatting when c2 params estimated.  Param currently 0
                 continue
 
-            converged.append( (c2, c2_err, c_pval) )
+            converged.append( (c2, c2_err, c2_pval) )
 
-            if c_pval < pcutoff:
+            if c2_pval < pcutoff:
                 num_significant += 1
-                sig_converged.append( (c2, c2_err, c_pval) )
+                sig_converged.append( (c2, c2_err, c2_pval) )
 
 
 
@@ -545,7 +545,7 @@ def extract_converged_sig_estimates(results, params, process_flag, pcutoff):
 
         edge_eps, denoise_eps, edge_eps_c2, denoise_eps_c2 = params
 
-        for h2, h2_err, pval, c2, c2_err, c_pval in results:
+        for h2, h2_err, pval, c2, c2_err, c2_pval in results:
             if h2 == None or h2_err == None or h2 < edge_eps or h2 > (1-edge_eps) or\
             c2 == None or c2_err == None or c2 <= edge_eps_c2 or c2 >= (1-edge_eps_c2):
             #For c2 part, update <= to < and >= to > to mirror h2 formatting when c2 params estimated. Param currently 0
@@ -555,7 +555,7 @@ def extract_converged_sig_estimates(results, params, process_flag, pcutoff):
             #For c2 part, update <= to < to mirror h2 formatting when c2 params estimated.  Param currently 0
                 continue
 
-            converged.append( (h2, h2_err, pval, c2, c2_err, c_pval) )
+            converged.append( (h2, h2_err, pval, c2, c2_err, c2_pval) )
 
             if pval < pcutoff and c2_pval < pcutoff:
                 num_significant += 1
