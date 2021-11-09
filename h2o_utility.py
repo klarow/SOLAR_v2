@@ -752,8 +752,8 @@ use_proband, house, verbose, buildonly, empi2cov, cov_list, empi2hhid, output_fa
     """
 
     #if the h2_path exists, we remove it
-    # if not buildonly and os.path.exists(h2_path):
-    #     shutil.rmtree(h2_path)
+    if not buildonly and os.path.exists(h2_path):
+        shutil.rmtree(h2_path)
 
     available_families = [fid for fid in families_with_case[icd9] if eth == 'ALL' or fam2eth[fid] == eth]
     chosen_families = random.sample(available_families, num_families)
@@ -788,7 +788,7 @@ use_proband, house, verbose, buildonly, empi2cov, cov_list, empi2hhid, output_fa
         if output_fams:
             results["chosen_families"] = chosen_families
         #Deletes directory
-        # shutil.rmtree(h2_path)
+        shutil.rmtree(h2_path)
     else:
     #KLB output families included REMOVE ME
         #KLBSHARED_ENV_4
