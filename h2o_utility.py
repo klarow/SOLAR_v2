@@ -598,7 +598,6 @@ def estimate_h2o(h2r_results, process_flag = "h2", ci = 95., show_warnings=True,
     num_converged = len(converged)
     num_significant = len(sig_converged)
 
-    posa = num_significant/float(num_converged)
 
     if num_significant == 0:
         if show_errors:
@@ -609,6 +608,7 @@ def estimate_h2o(h2r_results, process_flag = "h2", ci = 95., show_warnings=True,
         if show_warnings:
             print >> sys.stderr, "WARNING: There are fewer than 30 (%d) significant and converged estimates." % num_significant
 
+    posa = num_significant/float(num_converged)
 
     if process_flag == "h2" or process_flag == "c2":
         estimate, solarerr, solarpval = sorted(sig_converged)[len(sig_converged)/2]
