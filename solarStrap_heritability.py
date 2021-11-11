@@ -229,11 +229,11 @@ house=False, prefix='', nprocs=1, num_attempts=200, buildonly=False, use_proband
 
     results_file = open(os.path.join(solar_dir, '%s_solar_strap_results.csv' % prefix), 'w')
     results_writer = csv.writer(results_file)
-    results_writer.writerow(['trait', 'ethnicity', 'num_families', 'model', 'h2o', 'h2o_lower', 'h2o_upper', 'solarerr', 'solarpval', 'num_attempts', 'num_converged', 'num_significant', 'posa'])
+    results_writer.writerow(['trait', 'ethnicity', 'num_families', 'model', 'estimate', 'estimate_lower', 'estimate_upper', 'solarerr', 'solarpval', 'num_attempts', 'num_converged', 'num_significant', 'posa'])
 
     runs_file = open(os.path.join(solar_dir, '%s_solar_strap_allruns.csv' % prefix), 'w')
     runs_writer = csv.writer(runs_file)
-    runs_writer.writerow(['trait', 'ethnicity', 'num_families', 'model', 'h2o', 'solarerr', 'pvalue'])
+    runs_writer.writerow(['trait', 'ethnicity', 'num_families', 'model', 'estimate', 'solarerr', 'pvalue'])
 
     if num_families_range is None:
         num_families_range = [0.15,]
@@ -294,8 +294,8 @@ house=False, prefix='', nprocs=1, num_attempts=200, buildonly=False, use_proband
                                                               output_fams)
 
 
-                for h2o, err, pval in ae_h2r_results:
-                    runs_writer.writerow([icd9, eth, num_families, 'AE', h2o, err, pval])
+                for h2o, h2_err, h2_pval in ae_h2r_results:
+                    runs_writer.writerow([icd9, eth, num_families, 'AE', h2o, h2_err, h2_pval])
 
                 #KLB Remove family output update
                 if output_fams:
@@ -312,14 +312,14 @@ house=False, prefix='', nprocs=1, num_attempts=200, buildonly=False, use_proband
 
                 ae_h2_estimate = estimate_h2o(ae_h2r_results, "h2")
                 if ae_h2_estimate:
-                    h2o, h2olo, h2ohi, solarerr, solarpval, num_converged, num_significant, posa = ae_h2_estimate
-                    print "%10s %10s %5d %4s %7.2f %7.2f %7.2e %7d %7d %7d %7.2f" % (icd9, eth, num_families, 'AE', h2o, solarerr, solarpval, num_attempts, num_converged, num_significant, posa)
-                    results_writer.writerow([icd9, eth, num_families, 'AE', h2o, h2olo, h2ohi, solarerr, solarpval, num_attempts, num_converged, num_significant, posa])
+                    h2o, h2olo, h2ohi, h2_err, h2_pval, num_converged, num_significant, posa = ae_h2_estimate
+                    print "%10s %10s %5d %4s %7.2f %7.2f %7.2e %7d %7d %7d %7.2f" % (icd9, eth, num_families, 'AE', h2o, h2_err, h2_pval, num_attempts, num_converged, num_significant, posa)
+                    results_writer.writerow([icd9, eth, num_families, 'AE', h2o, h2olo, h2ohi, h2_err, h2_pval, num_attempts, num_converged, num_significant, posa])
 
                 if house:
 
-                    for h2o, err, pval, c2, c2_err, c2_pval in ace_h2r_results:
-                        runs_writer.writerow([icd9, eth, num_families, 'ACE_h2o', h2o, err, pval])
+                    for h2o, h2_err, h2_pval, c2, c2_err, c2_pval in ace_h2r_results:
+                        runs_writer.writerow([icd9, eth, num_families, 'ACE_h2o', h2o, h2_err, h2_pval])
                         runs_writer.writerow([icd9, eth, num_families, 'ACE_Shared_Env', c2, c2_err, c2_pval])
 
                     if h2c2_coprocess:
@@ -329,8 +329,8 @@ house=False, prefix='', nprocs=1, num_attempts=200, buildonly=False, use_proband
                         if h2c2_estimates:
                             h2o, h2olo, h2ohi, h2_err, h2_pval, num_converged, num_significant, posa, c2o, c2olo, c2ohi, c2_err, c2_pval = h2c2_estimates
 
-                            print "%10s %10s %5d %4s %7.2f %7.2f %7.2e %7d %7d %7d %7.2f" % (icd9, eth, num_families, 'ACE_h2o', h2o, solarerr, solarpval, num_attempts, num_converged, num_significant, posa)
-                            results_writer.writerow([icd9, eth, num_families, 'ACE_h2o', h2o, h2olo, h2ohi, solarerr, solarpval, num_attempts, num_converged, num_significant, posa])
+                            print "%10s %10s %5d %4s %7.2f %7.2f %7.2e %7d %7d %7d %7.2f" % (icd9, eth, num_families, 'ACE_h2o', h2o,  h2_err, h2_pval, num_attempts, num_converged, num_significant, posa)
+                            results_writer.writerow([icd9, eth, num_families, 'ACE_h2o', h2o, h2olo, h2ohi, h2_err, h2_pval, num_attempts, num_converged, num_significant, posa])
 
 
                             print "%10s %10s %5d %4s %7.2f %7.2f %7.2e %7d %7d %7d %7.2f" % (icd9, eth, num_families, 'ACE_Shared_Env', c2o, c2_err, c2_pval, num_attempts, num_converged, num_significant, posa)
@@ -342,9 +342,9 @@ house=False, prefix='', nprocs=1, num_attempts=200, buildonly=False, use_proband
                         h2_estimate = estimate_h2o([e[0:3] for e in ace_h2r_results],"h2")
 
                         if h2_estimate:
-                            h2o, h2olo, h2ohi, solarerr, solarpval, num_converged, num_significant, posa = h2_estimate
-                            print "%10s %10s %5d %4s %7.2f %7.2f %7.2e %7d %7d %7d %7.2f" % (icd9, eth, num_families, 'ACE_h2o', h2o, solarerr, solarpval, num_attempts, num_converged, num_significant, posa)
-                            results_writer.writerow([icd9, eth, num_families, 'ACE_h2o', h2o, h2olo, h2ohi, solarerr, solarpval, num_attempts, num_converged, num_significant, posa])
+                            h2o, h2olo, h2ohi, h2_err, h2_pval, num_converged, num_significant, posa = h2_estimate
+                            print "%10s %10s %5d %4s %7.2f %7.2f %7.2e %7d %7d %7d %7.2f" % (icd9, eth, num_families, 'ACE_h2o', h2o, h2_err, h2_pval, num_attempts, num_converged, num_significant, posa)
+                            results_writer.writerow([icd9, eth, num_families, 'ACE_h2o', h2o, h2olo, h2ohi, h2_err, h2_pval, num_attempts, num_converged, num_significant, posa])
 
 
                         c2_estimate = estimate_h2o([e[3:] for e in ace_h2r_results], "c2")
