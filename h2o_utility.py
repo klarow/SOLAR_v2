@@ -52,7 +52,7 @@ def assign_family_ethnicities(fam2empi, empi2demog, print_breakdown=True):
     eth2fam = defaultdict(set)
     fam2eth = dict()
     for fid, members in tqdm(fam2empi.items()):
-        #KLB update to only include patients you have demo info for, removes demo requirement
+
         family_ethnicities = [empi2demog[e]['race'] for e in members if empi2demog.get(e,0) != 0 if empi2demog[e]['race'] != 'Unknown' ]
         if len(family_ethnicities) == 0:
             mode = 'Unknown'
@@ -68,7 +68,7 @@ def assign_family_ethnicities(fam2empi, empi2demog, print_breakdown=True):
 
     return eth2fam, fam2eth
 
-#KLB4 add load covariates
+
 def load_covariates(cov_file_path):
     """
     Load covariates data from file.
@@ -134,7 +134,6 @@ def load_demographics(demographic_file_path):
         empi2demog[empi] = dict(zip(demog_header, row[1:]))
 
         # re-map the race codes
-        #KLB extra update race in NA, NULL, '' - race only one that uses NA
         if empi2demog[empi]['race'] in ('NA', 'NULL', '') :
             if empi2demog[empi]['ethnicity'] == 'W':
                 empi2demog[empi]['race'] = 'White'
@@ -168,7 +167,6 @@ def load_demographics(demographic_file_path):
                 empi2demog[empi]['race'] = 'Other'
 
         # recast age as float
-        #KLB extra use None instead of numpy.nan since nan is being turned into string 'nan' in output
         empi2demog[empi]['age'] = float(empi2demog[empi]['age']) if empi2demog[empi]['age'] != 'NULL' else None
 
     print >> sys.stderr, "Loaded demographic data for %d patients." % len(empi2demog)
@@ -302,8 +300,7 @@ def load_generic_pedigree(generic_ped_path, empi2sex, empi2age):
 
 class SolarException(Exception):
     pass
-#KLB9 add empi2cov here
-#KLB hhid_10 pass empi2hhid
+
 def build_solar_directories(h2_path, iid2ped, empi2trait,
 fam2empi, fam2count, fam2proband, use_proband, trait_type, empi2cov, cov_list, empi2hhid,
 verbose = True, family_ids_only = None):
@@ -348,18 +345,18 @@ verbose = True, family_ids_only = None):
     solar_phen = list()
     for row in trait_ped:
         famid, iid, fid, mid, sex, age, trait = row
-        #KLB hhid_11 have default us mid for househould ID (print twice)
+        #Household ID default is mother ID
         if empi2hhid is None:
             solar_ped.append( [famid, iid, fid, mid, sex, mid] )
 
         else:
-            #KLB hhid_12 if missing household ID leave blank, blank or 0 makes SOLAR assign a new unique hhid for that patient
+            #If missing household ID when user-defined leave blank, blank or 0 makes SOLAR assign a new unique hhid for that patient
             solar_ped.append( [famid, iid, fid, mid, sex, empi2hhid.get(iid,'')] )
 
         if trait is None:
             trait = ''
             age = ''
-        #KLB9 updated to take into account different # of covariates
+
         if empi2cov == None:
             if use_proband:
                 solar_phen.append([iid, trait, age, 1 if iid == fam2proband[famid] else 0])
@@ -396,7 +393,7 @@ verbose = True, family_ids_only = None):
 
     ped_fh = open(os.path.join(solar_working_path, 'pedigree.ped'), 'w')
     writer = csv.writer(ped_fh, delimiter=',')
-    #KLB hhid_13 add hhid in header
+
     writer.writerow(['famid', 'id', 'fa', 'mo', 'sex', 'hhid'])
     writer.writerows(solar_ped)
     ped_fh.close()
@@ -404,7 +401,7 @@ verbose = True, family_ids_only = None):
     phen_fh = open(os.path.join(solar_working_path, 'phenotypes.phen'), 'w')
     writer = csv.writer(phen_fh, delimiter=',', quoting=csv.QUOTE_NONE)
 
-#KLB10 updated with covariates
+
     write_holder = ['id', 'pheno', 'age']
     if use_proband:
         write_holder.append('proband')
@@ -422,14 +419,14 @@ verbose = True, family_ids_only = None):
 
     # the typical id used for household when it is not directly available is
     # the mother id (mo)
-    # we also explore the use of the family id
+    # other options are household ID (bulidingID+SteetID+ZipCode+familyID) or familyID
 
-    #KLB11 make cov_list a list if None for tcl
+    #make cov_list a list if None for tcl
 
-    #KLB inorm update 3 removed tdist param, normalize quant trait with inorm
+    #normalize quant trait with inorm instead of tdist (more robust)
     if cov_list == None:
         cov_list = [""]
-#KLB hhid_14 add hhid in header remove field hhid mo command before load pedigree
+
     tcl_load_string = """
     proc loadped {} {
         load pedigree pedigree.ped
@@ -637,9 +634,7 @@ def estimate_h2o(h2r_results, process_flag = "h2", ci = 95., show_warnings=True,
 
 
 
-#KLB 6 add in empicov and covlist
-#KLB hhid_6 add in empi2hhid
-#KLBOUT_2
+
 def solar_strap(num_families, families_with_case, icd9, trait_type, num_attempts, solar_dir,
 iid2ped, all_traits, eth, fam2empi, fam2eth,all_fam2count, all_fam2proband,
 use_proband, house=False, nprocs=1, verbose=False, buildonly=False, empi2cov=None, cov_list=None, empi2hhid=None, output_fams=False):
@@ -656,10 +651,9 @@ use_proband, house=False, nprocs=1, verbose=False, buildonly=False, empi2cov=Non
 
     def log_solar_results(single_results):
         ae_h2r_results.append((single_results['AE']['h2r'], single_results['AE']['err'], single_results['AE']['pvalue']))
-        #KLBSHARED_ENV_5
+
         ace_h2r_results.append((single_results['ACE']['h2r'], single_results['ACE']['err'], single_results['ACE']['pvalue'],single_results['ACE']['c2'], single_results['ACE']['c2_err'], single_results['ACE']['c2_pvalue']  ))
-        #KLB output families included REMOVE ME
-        #KLBOUT_7
+
         if output_fams:
             h2r_families.append(single_results['chosen_families'])
         if verbose and not buildonly:
@@ -683,7 +677,6 @@ use_proband, house=False, nprocs=1, verbose=False, buildonly=False, empi2cov=Non
                 if acepv is None:
                     acepv = numpy.nan
 
-                #KLBSHARED_ENV_6
                 acec2 = single_results['ACE']['c2']
                 acec2er = single_results['ACE']['c2_err']
                 acec2pv = single_results['ACE']['c2_pvalue']
@@ -693,21 +686,18 @@ use_proband, house=False, nprocs=1, verbose=False, buildonly=False, empi2cov=Non
                     acec2er = numpy.nan
                 if acec2pv is None:
                     acec2pv = numpy.nan
-                #KLBSHARED_ENV_7
 
                 print >> sys.stderr, "%10s %15s %5d %5d %7.2f %7.2f %10.2e %7.2f %7.2f %10.2e %7.2f %7.2f %10.2e %10.4f" % (icd9, eth, num_families, len(ae_h2r_results), aeh2, aeer, aepv, aceh2, aceer, acepv, acec2, acec2er, acec2pv, single_results['APF'])
 
     if num_families > len(families_with_case[icd9]):
         print >> sys.stderr, "Number of families to be sampled (%d) is larger than what is available (%d)." % (num_families, len(families_with_case[icd9]))
     else:
-        #KLBSHARED_ENV_8
+
         if verbose and not buildonly:
             print >> sys.stderr, "%10s %15s %5s %5s %4s %5s %7s %5s %3s %4s %15s %6s %7s %10s" % ('Trait', 'Ethnicity', 'NFam', 'Samp', 'AE h2', 'err', 'pval', 'ACE h2', 'err', 'pval','Shared Env c2', 'c2 err', 'c2 pval', 'Sample AFP')
 
         pool = mp.Pool(nprocs)
-#KLB add in cov to solar
-#KLB hhid_7 add empi2hhid
-#KLBOUT_3
+
         for i in range(num_attempts):
             h2_path = os.path.join(solar_dir, icd9, 'h2_%d_%s' % (num_families, random_string(5)))
             solar_args = (h2_path,
@@ -737,12 +727,10 @@ use_proband, house=False, nprocs=1, verbose=False, buildonly=False, empi2cov=Non
 
         pool.close()
         pool.join()
-#KLB output families included REMOVE ME
+
 
     return ae_h2r_results, ace_h2r_results, h2r_families
-#KLB7 pass cov stuff to solar
-#KLB hhid_8 pass hhid dict to solar
-#KLBOUT_4
+
 def solar(h2_path, families_with_case, icd9, trait_type, num_families,
 iid2ped, all_traits, eth, fam2empi, fam2eth,all_fam2count, all_fam2proband,
 use_proband, house, verbose, buildonly, empi2cov, cov_list, empi2hhid, output_fams):
@@ -762,8 +750,7 @@ use_proband, house, verbose, buildonly, empi2cov, cov_list, empi2hhid, output_fa
         apf = numpy.mean([numpy.sum([all_traits[icd9].get(iid, 0) for iid in fam2empi[famid]]) for famid in chosen_families])
     elif trait_type == TRAIT_TYPE_QUANTITATIVE:
         apf = numpy.mean([all_fam2count[icd9][famid] for famid in chosen_families])
-#KLB8 pass cov stuff to build solar strap
-#KLB hhid_9 pass empi2hhid to solar
+
     build_solar_directories(h2_path,
                            iid2ped,
                            all_traits[icd9],
@@ -780,20 +767,18 @@ use_proband, house, verbose, buildonly, empi2cov, cov_list, empi2hhid, output_fa
 
     if not buildonly:
         #print >> sys.stderr, h2_path
-        #KLB inorm update 1 added trait_type for inorm
+
         results = single_solar_run(h2_path, trait_type, house, verbose)
         results['APF'] = apf
-        #KLB output families included REMOVE ME
-        #KLBOUT_5
+
         if output_fams:
             results["chosen_families"] = chosen_families
         #Deletes directory
         shutil.rmtree(h2_path)
     else:
-    #KLB output families included REMOVE ME
-        #KLBSHARED_ENV_4
+
         results = {'AE':{'h2r':None, 'err':None, 'pvalue':None}, 'ACE':{'h2r':None, 'err':None, 'pvalue':None, 'c2':None, 'c2_err':None, 'c2_pvalue':None}, 'APF': apf}
-        #KLBOUT_6
+
         if output_fams:
             results["chosen_families"] = chosen_families
 
@@ -828,7 +813,6 @@ def parse_polygenic_out(polygenic_out_fn, verbose):
         except IndexError:
             h2r_err = None
 
-        #KLBSHARED_ENV_1
         c2_raw = [row.strip() for row in results if row.find('C2') != -1]
 
         try:
@@ -848,7 +832,7 @@ def parse_polygenic_out(polygenic_out_fn, verbose):
         except (ValueError, IndexError):
             c2_raw = None
 
-    #KLBSHARED_ENV_2
+
     return {'h2r':h2r, 'err':h2r_err, 'pvalue':p,'c2':c2, 'c2_err':c2_err, 'c2_pvalue':c2_pval }
 
 def single_solar_run(h2_path, trait_type, house=False, verbose=False, really_verbose=False):
@@ -871,7 +855,7 @@ def single_solar_run(h2_path, trait_type, house=False, verbose=False, really_ver
 
     polygenic_out_fn = os.path.join(solar_working_path, 'pheno', 'polygenic.out')
 
-    #KLB inorm update 2, create new normalized pheno
+
     if trait_type == TRAIT_TYPE_QUANTITATIVE:
         polygenic_out_fn = os.path.join(solar_working_path, 'ipheno', 'polygenic.out')
 
@@ -885,7 +869,7 @@ def single_solar_run(h2_path, trait_type, house=False, verbose=False, really_ver
         ace_results = parse_polygenic_out(polygenic_out_fn, verbose=really_verbose)
 
     else:
-        #KLBSHARED_ENV_3
+
         ace_results = {'h2r':None, 'err':None, 'pvalue':None, 'c2':None,  'c2_err':None, 'c2_pvalue':None }
 
     if really_verbose:

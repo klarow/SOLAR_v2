@@ -9,7 +9,7 @@ Compute heritability for one or more traits.
 
 USAGE EXAMPLE
 -------------
-python solarStrap_heritability.py trait=path/to/traitfile.txt.gz type=D demog=demogtable.txt.gz fam=family_ids.txt.gz ped=generic_pedigree.txt.gz [nfam=0.15] [sd=path/to/working_directory] [ace=no] [verbose=no] [samples=200] [buildonly=no] [proband=yes]
+python solarStrap_heritability.py trait=path/to/traitfile.txt.gz type=D demog=demogtable.txt.gz fam=family_ids.txt.gz ped=generic_pedigree.txt.gz [hhid=household_id.txt.gz] [cov=covatiates.txt.gz] [nfam=0.15] [sd=path/to/working_directory] [ace=no] [verbose=no] [samples=200] [buildonly=no] [proband=yes] [outputfams=no] [h2c2coprocess=yes]
 
 """
 __version__ = 1.0
@@ -51,8 +51,7 @@ from h2o_utility import TRAIT_TYPE_QUANTITATIVE
 
 common_data_path = ''
 
-#KLB2 add in cov file
-#KLB hhid_2 add in hhid file
+
 def main(demographic_file, family_file, pedigree_file, trait_path, cov_file, hhid_file,
 solar_dir, trait_type, num_families_range, diag_slice=None, ethnicities=None, verbose=False,
 house=False, prefix='', nprocs=1, num_attempts=200, buildonly=False, use_proband=True,output_fams=False,h2c2_coprocess=True):
@@ -92,7 +91,7 @@ house=False, prefix='', nprocs=1, num_attempts=200, buildonly=False, use_proband
         empi2sex[empi] = data['sex']
         empi2age[empi] = data['age'] if not data['age'] == 'NULL' else ''
 
-    #KLB3 load covariates data
+    #load covariates data
     if cov_file != None:
         cov_file_path = os.path.join(common_data_path, cov_file)
         empi2cov,cov_list = load_covariates(cov_file_path)
@@ -100,7 +99,7 @@ house=False, prefix='', nprocs=1, num_attempts=200, buildonly=False, use_proband
         empi2cov = None
         cov_list = None
 
-    #KLB hhid_3 load hhid ped_data
+    #load household ID data
     if hhid_file != None:
         hhid_file_path = os.path.join(common_data_path, hhid_file)
         empi2hhid = load_hhid(hhid_file_path)
@@ -265,11 +264,8 @@ house=False, prefix='', nprocs=1, num_attempts=200, buildonly=False, use_proband
                 if num_families > len(families_with_case[eth][icd9]):
                     print >> sys.stderr, "Not enough families available, skipping."
                     continue
-                #KLB5 added covariates to solar_strap
-                #KLB HHID_5 added hhid to solar_strap in utility
-                #Remove me
+
                 #Note, h2r_families is an empty list unless output_fams is selected
-                #KLBOUT_8
                 ae_h2r_results, ace_h2r_results, h2r_families = solar_strap(num_families,
                                                               families_with_case[eth],
                                                               icd9,
@@ -297,7 +293,6 @@ house=False, prefix='', nprocs=1, num_attempts=200, buildonly=False, use_proband
                 for h2o, h2_err, h2_pval in ae_h2r_results:
                     runs_writer.writerow([icd9, eth, num_families, 'AE', h2o, h2_err, h2_pval])
 
-                #KLB Remove family output update
                 if output_fams:
                     includedfam_file = open(os.path.join(solar_dir, '%s_solar_strap_includedfam.csv' % prefix), 'w')
                     fams_writer = csv.writer(includedfam_file)
@@ -377,9 +372,7 @@ if __name__ == '__main__':
     print >> sys.stderr, "Summary results will be saved in %(sd)s/%(name)s_solar_strap_results.csv" % args
     print >> sys.stderr, "Results from each bootstrap will be saved at %(sd)s/%(name)s_solar_strap_allruns.csv" % args
     print >> sys.stderr, ""
-#KLB1 added cov to valid arguments, and to main as cov_file
-#KLB hhid1 added hhid to valid arguments and to main as hhid_file
-#KLB output families included
+
     valid_args = ('demog', 'fam', 'ped', 'trait', 'cov','hhid', 'sd', 'type', 'nfam', 'slice',
         'eth', 'verbose', 'ace', 'name', 'nprocs','samples', 'buildonly', 'proband','outputfams',"h2c2coprocess")
     for argname in args.keys():
